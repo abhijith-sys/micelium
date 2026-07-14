@@ -46,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
   controls.target.set(0, 0, 0);
 
   let model = null;
-  let modelBaseY = 0;
+  // Extra downward shift in the hero frame (negative = lower)
+  const modelBaseY = -0.55;
   let autoSpin = true;
   let resumeTimer = null;
   const clock = new THREE.Clock();
@@ -78,27 +79,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      const box = new THREE.Box3().setFromObject(root);
-      const center = new THREE.Vector3();
+      // Scale first, then center — keeps the model stable in frame
+      const sizeBox = new THREE.Box3().setFromObject(root);
       const size = new THREE.Vector3();
-      box.getCenter(center);
-      box.getSize(size);
-
-      root.position.sub(center);
-
+      sizeBox.getSize(size);
       const maxDim = Math.max(size.x, size.y, size.z) || 1;
       root.scale.setScalar(1.35 / maxDim);
 
-      // Drop lower in the hero frame — fills the empty bottom space
-      modelBaseY = -0.42;
-      root.position.y += modelBaseY;
+      const centeredBox = new THREE.Box3().setFromObject(root);
+      const center = new THREE.Vector3();
+      centeredBox.getCenter(center);
+      root.position.sub(center);
 
-      scene.add(root);
-      model = root;
+      // Wrapper holds the vertical offset so float/spin never wipe centering
+      const wrapper = new THREE.Group();
+      wrapper.add(root);
+      wrapper.position.y = modelBaseY;
+
+      scene.add(wrapper);
+      model = wrapper;
 
       camera.near = 0.01;
       camera.far = 100;
-      camera.position.set(0, -0.05, 2.6);
+      camera.position.set(0, modelBaseY, 2.6);
       camera.lookAt(0, modelBaseY, 0);
       camera.updateProjectionMatrix();
       controls.target.set(0, modelBaseY, 0);
